@@ -1,0 +1,152 @@
+--Criar tabelas para armazenar os dados das recolhas dos sensores
+CREATE TABLE recolhas_accelerometer (
+	id_recolha integer NOT NULL,
+	actividade text COLLATE pg_catalog."default",
+	id_user integer,
+	instante integer NOT NULL,
+	acceleration float NOT NULL)
+
+ CREATE TABLE recolhas_magnetometer (
+	id_recolha integer NOT NULL,
+	actividade text COLLATE pg_catalog."default",
+	id_user integer,
+	instante integer NOT NULL,
+	magnitude float NOT NULL)
+
+ CREATE TABLE recolhas_gyroscope (
+	id_recolha integer NOT NULL,
+	actividade text COLLATE pg_catalog."default",
+	id_user integer,
+	instante integer NOT NULL,
+	gyroscope float NOT NULL)
+
+CREATE TABLE recolhas_gps (
+	id_recolha integer NOT NULL,
+	actividade text COLLATE pg_catalog."default",
+	instante integer NOT NULL,
+	latitude double precision,
+	longitude double precision,
+	posicao geometry(Point,4326) NOT NULL,
+	id_user integer)
+	
+ CREATE TABLE recolhas_2014 (
+	id_recolha integer NOT NULL,
+	instante integer NOT NULL,
+	acceleration float NOT NULL)
+
+CREATE TABLE recolhas_accelerometer_sussex (
+	actividade text COLLATE pg_catalog."default",
+	instante bigint NOT NULL,
+	acceleration float NOT NULL)
+
+create view data_acc as
+select 
+	id_recolha,
+	id_user,
+	actividade, 
+	instante, 
+	avg(acceleration) over(order by instante rows between 4 preceding and current row) avg_values, 
+	min(acceleration) over(order by instante rows between 4 preceding and current row) min_values, 
+	max(acceleration) over(order by instante rows between 4 preceding and current row) max_values,
+	stddev(acceleration) over(order by instante rows between 4 preceding and current row) std_values
+from recolhas_accelerometer
+group by id_recolha, actividade , instante, id_user, acceleration
+
+create view mad_acc as with averages_acc as (
+select id_recolha, actividade, instante, id_user, accelaration, avg(accelaration) as Avg_Acc, abs(acceleration - avg(acceleration) over(order by instante rows between 4 preceding and current row)) as Abs_Mov_Avg
+from recolhas_accelerometer 
+group by accelaration, instante, id_recolha, actividade, id_user)
+select id_recolha, instante, sum(Abs_Mov_Avg)/count(*) over(order by instante rows between 4 preceding and current row) as MAD 
+from averages_acc 
+group by instante, id_recolha
+
+create view data_magn as
+select 
+	id_recolha,
+	id_user,
+	actividade, 
+	instante, 
+	avg(magnitude) over(order by instante rows between 4 preceding and current row) avg_values, 
+	min(magnitude) over(order by instante rows between 4 preceding and current row) min_values, 
+	max(magnitude) over(order by instante rows between 4 preceding and current row) max_values,
+	stddev(magnitude) over(order by instante rows between 4 preceding and current row) std_values
+from recolhas_magnetometer
+group by id_recolha, actividade , instante, id_user, magnitude
+
+create view mad_magn as with averages_magn as (
+select id_recolha, actividade, instante, id_user, magnitude, avg(magnitude) as Avg_Magn, abs(magnitude - avg(magnitude) over(order by instante rows between 4 preceding and current row)) as Abs_Mov_Avg_Magn
+from recolhas_magnetometer 
+group by magnitude, instante, id_recolha, actividade, id_user)
+select id_recolha, instante, sum(Abs_Mov_Avg_Magn)/count(*) over(order by instante rows between 4 preceding and current row) as MAD 
+from averages_magn 
+group by instante, id_recolha 
+
+create view data_gyr as 
+select
+	id_recolha,
+	id_user,
+	actividade, 
+	instante, 
+	avg(gyroscope) over(order by instante rows between 4 preceding and current row) avg_values, 
+	min(gyroscope) over(order by instante rows between 4 preceding and current row) min_values, 
+	max(gyroscope) over(order by instante rows between 4 preceding and current row) max_values,
+	stddev(gyroscope) over(order by instante rows between 4 preceding and current row) std_values
+from recolhas_gyroscope
+group by id_recolha, actividade , instante, id_user, gyroscope
+
+create view mad_gyr as with averages_gyr as (
+select id_recolha, actividade, instante, id_user, gyroscope, avg(gyroscope) as Avg_Gyr, abs(gyroscope - avg(gyroscope) over(order by instante rows between 4 preceding and current row)) as Abs_Mov_Avg_Gyr
+from recolhas_gyroscope
+group by gyroscope, instante, id_recolha, actividade, id_user)
+select id_recolha, instante, sum(Abs_Mov_Avg_Gyr)/count(*) over(order by instante rows between 4 preceding and current row) as MAD 
+from averages_gyr 
+group by instante, id_recolha
+
+create view data_acc_2014 as
+select 
+	id_recolha,
+	instante, 
+	avg(acceleration) over(order by instante rows between 4 preceding and current row) avg_values, 
+	min(acceleration) over(order by instante rows between 4 preceding and current row) min_values, 
+	max(acceleration) over(order by instante rows between 4 preceding and current row) max_values,
+	stddev(acceleration) over(order by instante rows between 4 preceding and current row) std_values
+from recolhas_2014
+group by id_recolha,instante, acceleration
+
+create view mad_acc_2014 as with averages_acc_2014 as (
+select id_recolha, instante, acceleration, avg(acceleration) as Avg_Acc, abs(acceleration - avg(acceleration) over(order by instante rows between 4 preceding and current row)) as Abs_Mov_Avg
+from recolhas_2014
+group by acceleration, instante, id_recolha)
+select id_recolha, instante, sum(Abs_Mov_Avg)/count(*) over(order by instante rows between 4 preceding and current row) as MAD 
+from averages_acc_2014 
+group by instante, id_recolha
+
+create view data_acc_sussex as
+select 
+	actividade, 
+	instante, 
+	avg(acceleration) over(order by instante rows between 4 preceding and current row) avg_values, 
+	min(acceleration) over(order by instante rows between 4 preceding and current row) min_values, 
+	max(acceleration) over(order by instante rows between 4 preceding and current row) max_values,
+	stddev(acceleration) over(order by instante rows between 4 preceding and current row) std_values
+from recolhas_accelerometer_sussex
+group by actividade , instante, acceleration
+
+create view mad_acc_sussex as with averages_acc as (
+select actividade, instante, acceleration, avg(acceleration) as Avg_Acc, abs(acceleration - avg(acceleration) over(order by instante rows between 4 preceding and current row)) as Abs_Mov_Avg
+from recolhas_accelerometer_sussex
+group by acceleration, instante, actividade)
+select instante, sum(Abs_Mov_Avg)/count(*) over(order by instante rows between 4 preceding and current row) as MAD 
+from averages_acc 
+group by instante
+
+copy (select * from data_magn) to 'C:\Users\****\PycharmProjects\senseMyCity\smc\dataset_magn.csv' with delimiter ',' csv header;
+copy (select * from mad_magn) to 'C:\Users\****\PycharmProjects\senseMyCity\smc\dataset_magn_mad.csv' with delimiter ',' csv header;
+copy (select * from mad_gyr) to 'C:\Users\****\PycharmProjects\senseMyCity\smc\dataset_gyr_mad.csv' with delimiter ',' csv header;  
+copy (select * from data_gyr) to 'C:\Users\****\PycharmProjects\senseMyCity\smc\dataset_gyr.csv' with delimiter ',' csv header;
+copy (select * from data_acc) to 'C:\Users\****\PycharmProjects\senseMyCity\smc\dataset_acc.csv' with delimiter ',' csv header;
+copy (select * from mad_acc) to 'C:\Users\****\PycharmProjects\senseMyCity\smc\dataset_acc_mad.csv' with delimiter ',' csv header;
+copy (select * from data_acc_2014) to 'C:\Users\****\PycharmProjects\senseMyCity\smc\dataset_acc_2014.csv' with delimiter ',' csv header;
+copy (select * from mad_acc_2014) to 'C:\Users\****\PycharmProjects\senseMyCity\smc\dataset_acc_2014_mad.csv' with delimiter ',' csv header;
+copy (select * from data_acc_sussex) to 'C:\Users\****\Downloads\sussex_acc.csv' with delimiter ',' csv header;
+copy (select * from mad_acc_sussex) to 'C:\Users\****\Downloads\sussex_acc_mad.csv' with delimiter ',' csv header;
